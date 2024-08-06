@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Editor</title>
+    <style>
+        #pdf-container {
+            position: relative;
+        }
+        #pdf-canvas, #fabric-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #toolbar {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="toolbar">
+        <input type="file" id="upload" accept="application/pdf" />
+        <button id="addTextBtn">Add Text</button>
+        <button id="addTableBtn">Add Table</button>
+        <button id="downloadPDFBtn">Download PDF</button>
+        <button id="getTextElementsBtn">Get Text Elements</button>
+    </div>
+    <div id="pdf-container">
+        <canvas id="pdf-canvas"></canvas>
+        <canvas id="fabric-canvas"></canvas>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.5.0/fabric.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script>
+        let pdfDoc = null;
+        let pdfBytes = null;
+        let fabricCanvas = new fabric.Canvas('fabric-canvas');
+        let originalWidth, originalHeight;
+        let currentPage = 1;
+        let textElements = []
+    
+        document.getElementById('upload').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function() {
+                    const typedarray = new Uint8Array(this.result);
+                    pdfBytes = typedarray;
+                    pdfjsLib.getDocument(typedarray).promise.then((pdf) => {
+                        pdfDoc = pdf;
+                        renderPage(1);
+                    });
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+    
+        function renderPage(num) {
+            pdfDoc.getPage(num).then((page) => {
+                const viewport = page.getViewport({ scale: 1.5 });
+                const canvas = document.getElementById('pdf-canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+    
+                originalWidth = viewport.width;
+                originalHeight = viewport.height;
+    
+                const renderContext = {
+                    canvasContext: context,
+                    viewport: viewport
+                };
+                page.render(renderContext).promise.then(() => {
+                    fabricCanvas.setWidth(viewport.width);
+                    fabricCanvas.setHeight(viewport.height);
+                    fabricCanvas.clear();
+                });
+            });
+        }
+    
+        document.getElementById('addTextBtn').addEventListener('click', () => {
+            const text = new fabric.Text('Hello', {
+                left: 100,
+                top: 100,
+                fill: 'blue',
+                fontSize: 20,
+                selectable: true
+            });
+            fabricCanvas.add(text);
+        });
+    
+        document.getElementById('addTableBtn').addEventListener('click', () => {
+            tableInfo = {
+                x: 100, // Position of the table
+                y: 200,
+                rows: 3,
+                columns: 4,
+                cellWidth: 100,
+                cellHeight: 50
+            };
+
+            tableGroup = new fabric.Group([], {
+                left: tableInfo.x,
+                top: tableInfo.y
+            });
+
+            for (let i = 0; i < tableInfo.rows; i++) {
+                for (let j = 0; j < tableInfo.columns; j++) {
+                    const rect = new fabric.Rect({
+                        left: j * tableInfo.cellWidth,
+                        top: i * tableInfo.cellHeight,
+                        fill: 'white',
+                        stroke: 'black',
+                        width: tableInfo.cellWidth,
+                        height: tableInfo.cellHeight
+                    });
+
+                    const cellText = new fabric.Text(`Cell ${i+1}-${j+1}`, {
+                        left: j * tableInfo.cellWidth + 10,
+                        top: i * tableInfo.cellHeight + 10,
+                        fontSize: 14,
+                        fill: 'black',
+                        originX: 'left',
+                        originY: 'top'
+                    });
+
+                    tableGroup.addWithUpdate(rect);
+                    tableGroup.addWithUpdate(cellText);
+                }
+            }
+
+            fabricCanvas.add(tableGroup);
+            fabricCanvas.renderAll();
+        });
+
+        document.getElementById('downloadPDFBtn').addEventListener('click', async () => {
+
+            textElements = fabricCanvas.getObjects().filter(obj => obj.type === 'text');
+            if (textElements.length === 0) {
+                console.log('No text elements found.');
+            } else {
+                // Create SVG content from text elements
+                const svgContent = textElements.map(text => {
+                    return `<text x="${text.left}" y="${text.top}" fill="${text.fill}" font-size="${text.fontSize}">${text.text}</text>`;
+                }).join('\n');
+    
+                // Construct SVG string
+                const svgString = `
+                    <svg width="${fabricCanvas.width}" height="${fabricCanvas.height}" xmlns="http://www.w3.org/2000/svg">
+                      ${svgContent}
+                    </svg>
+                `;
+    
+                // Optionally, display or use the SVG string
+                console.log(svgString);
+                console.log('SVG content has been generated and logged to the console.', textElements);
+            }
+            if (!pdfBytes) return;
+    
+            const pdfDoc = await PDFLib.PDFDocument.load(pdfBytes);
+            const numPages = pdfDoc.getPageCount();
+    
+            for (let i = 0; i < numPages; i++) {
+                const page = pdfDoc.getPages()[i];
+                const { width, height } = page.getSize();
+    
+                if (i === currentPage - 1) {
+                    // Convert fabric canvas to image
+                    const fabricDataUrl = fabricCanvas.toDataURL('image/png');
+                    const pngImage = await pdfDoc.embedPng(fabricDataUrl);
+    
+                    // Draw the image on the PDF
+
+                    page.drawImage(pngImage, {
+                        x: 0,
+                        y: 0,
+                        width: width,
+                        height: height
+                    });
+
+                    page.drawSvgPath("M10 40 L20 10 L30 40 Z", {
+    x: 20,
+      y: 720, 
+    borderWidth: 10
+  });
+textElements.map((textElement) => {
+    console.log('textElement', textElement.text, textElement.scaleX, textElement.scaleY)
+    page.drawText(textElement.text, {
+                        x :textElement.left, // X-coordinate for the text
+                        y: height - textElement.top, // Y-coordinate for the text
+                        size: 12 * (Math.ceil(Number(textElement.scaleX))),
+                        borderWidth: 2, // Outline width
+                    
+                    });
+})
+  
+                }
+            }
+    
+            const pdfBytesEdited = await pdfDoc.save();
+            const pdfUrl = URL.createObjectURL(new Blob([pdfBytesEdited], { type: 'application/pdf' }));
+            const link = document.createElement('a');
+            link.href = pdfUrl;
+            link.download = 'edited.pdf';
+            link.click();
+        });
+    
+    
+    </script>
+    
+</body>
+</html>

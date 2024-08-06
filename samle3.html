@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Editor</title>
+  <style>
+    #canvas-container {
+      position: relative;
+    }
+    canvas {
+      border: 1px solid black;
+    }
+    .toolbar {
+      margin: 10px 0;
+    }
+    .toolbar button {
+      margin-right: 5px;
+    }
+    .toolbar input[type="color"] {
+      margin-left: 5px;
+    }
+    .draggable {
+      position: absolute;
+      cursor: grab;
+      resize: both;
+      overflow: hidden;
+      border: 1px dashed #aaa;
+      padding: 2px;
+      background-color: rgba(255, 255, 255, 0.7);
+      border-radius: 4px;
+    }
+    .draggable textarea {
+      border: none;
+      background: transparent;
+      width: 100%;
+      height: 100%;
+      resize: none;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      color: #333;
+    }
+    table {
+      border-collapse: collapse;
+      width: auto;
+    }
+    td {
+      border: 1px solid black;
+      width: 100px;
+      height: 40px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <label for="file-input">Upload PDF:</label>
+    <input type="file" id="file-input" accept=".pdf" />
+
+    <button id="add-annotation" title="Add an annotation text to the PDF">Add Annotation</button>
+    <button id="add-signature" title="Add a signature text to the PDF">Add Signature</button>
+    <button id="add-comment" title="Add a comment text to the PDF">Add Comment</button>
+    <button id="add-table" title="Add a table to the PDF">Add Table</button>
+
+    <label for="text-color">Text Color:</label>
+    <input type="color" id="text-color" value="#000000" />
+
+    <button id="download-pdf" title="Download the edited PDF document">Download PDF</button>
+  </div>
+
+  <div id="canvas-container">
+    <canvas id="pdf-canvas"></canvas>
+    <div id="elements-container"></div>
+  </div>
+
+  <!-- PDF-Lib Library -->
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+  <!-- PDF.js Library -->
+  <script src="https://unpkg.com/pdfjs-dist@2.16.105/build/pdf.min.js"></script>
+
+  <!-- html2canvas Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.0/html2canvas.min.js"></script>
+
+  <script>
+    const fileInput = document.getElementById('file-input');
+    const pdfCanvas = document.getElementById('pdf-canvas');
+    const ctx = pdfCanvas.getContext('2d');
+    const elementsContainer = document.getElementById('elements-container');
+    const textColorInput = document.getElementById('text-color');
+    let existingPdfBytes = null;
+    let drawing = false;
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const fileReader = new FileReader();
+        fileReader.onload = async (event) => {
+          existingPdfBytes = new Uint8Array(event.target.result);
+          await renderPDF();
+        };
+        fileReader.readAsArrayBuffer(file);
+      }
+    });
+
+    async function renderPDF() {
+      const loadingTask = pdfjsLib.getDocument({data: existingPdfBytes});
+      const pdf = await loadingTask.promise;
+      const page = await pdf.getPage(1);
+      const viewport = page.getViewport({ scale: 1.5 });
+      pdfCanvas.width = viewport.width;
+      pdfCanvas.height = viewport.height;
+      const renderContext = {
+        canvasContext: ctx,
+        viewport: viewport
+      };
+      await page.render(renderContext).promise;
+    }
+
+    function makeElementDraggable(element) {
+      let isDragging = false;
+
+      element.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        element.style.cursor = 'grabbing';
+        const offsetX = e.clientX - element.getBoundingClientRect().left;
+        const offsetY = e.clientY - element.getBoundingClientRect().top;
+
+        const onMouseMove = (e) => {
+          if (!isDragging) return;
+          element.style.left = `${e.clientX - offsetX}px`;
+          element.style.top = `${e.clientY - offsetY}px`;
+        };
+
+        const onMouseUp = () => {
+          isDragging = false;
+          element.style.cursor = 'grab';
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      });
+    }
+
+    function createDraggableElement(type, color, top, left, width = '150px', height = '50px') {
+      const element = document.createElement('div');
+      element.className = 'draggable';
+      element.style.top = top;
+      element.style.left = left;
+      element.style.width = width;
+      element.style.height = height;
+      
+      if (type === 'table') {
+        element.innerHTML = createTableHTML(3, 3); // Default 3x3 table
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.style.color = color;
+        textarea.placeholder = `Enter ${type} text here`;
+        element.appendChild(textarea);
+      }
+
+      elementsContainer.appendChild(element);
+      makeElementDraggable(element);
+    }
+
+    function createTableHTML(rows, cols) {
+      let tableHtml = '<table>';
+      for (let r = 0; r < rows; r++) {
+        tableHtml += '<tr>';
+        for (let c = 0; c < cols; c++) {
+          tableHtml += '<td contenteditable="true"></td>';
+        }
+        tableHtml += '</tr>';
+      }
+      tableHtml += '</table>';
+      return tableHtml;
+    }
+
+    document.getElementById('add-annotation').addEventListener('click', () => {
+      createDraggableElement('annotation', textColorInput.value, '50px', '50px');
+    });
+
+    document.getElementById('add-signature').addEventListener('click', () => {
+      createDraggableElement('signature', textColorInput.value, '300px', '300px');
+    });
+
+    document.getElementById('add-comment').addEventListener('click', () => {
+      createDraggableElement('comment', textColorInput.value, '400px', '400px');
+    });
+
+    document.getElementById('add-table').addEventListener('click', () => {
+      const rows = parseInt(prompt('Enter number of rows:', '3'), 10);
+      const cols = parseInt(prompt('Enter number of columns:', '3'), 10);
+      if (!isNaN(rows) && !isNaN(cols)) {
+        const tableElement = createDraggableElement('table', '#000000', '150px', '150px');
+        tableElement.innerHTML = createTableHTML(rows, cols);
+      } else {
+        alert('Please enter valid numbers for rows and columns.');
+      }
+    });
+
+    pdfCanvas.addEventListener('mousedown', (e) => {
+      if (!drawing) {
+        drawing = true;
+        ctx.beginPath();
+        ctx.moveTo(e.offsetX, e.offsetY);
+      }
+    });
+
+    pdfCanvas.addEventListener('mousemove', (e) => {
+      if (drawing) {
+        ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.strokeStyle = textColorInput.value; // Dynamic stroke color
+        ctx.lineWidth = 2; // Line width for drawing
+        ctx.stroke();
+      }
+    });
+
+    pdfCanvas.addEventListener('mouseup', () => {
+      if (drawing) {
+        drawing = false;
+        ctx.closePath();
+      }
+    });
+
+    document.getElementById('download-pdf').addEventListener('click', async () => {
+      try {
+        const { PDFDocument } = window.PDFLib;
+        const newPdfDoc = await PDFDocument.create();
+        const pdfPage = newPdfDoc.addPage([pdfCanvas.width, pdfCanvas.height]);
+
+        // Draw the canvas content to the PDF
+        const canvasImage = pdfCanvas.toDataURL('image/png');
+        const canvasBytes = await fetch(canvasImage).then(res => res.arrayBuffer());
+        const pngImage = await newPdfDoc.embedPng(canvasBytes);
+        pdfPage.drawImage(pngImage, {
+          x: 0,
+          y: 0,
+          width: pdfCanvas.width,
+          height: pdfCanvas.height,
+        });
+
+        // Add HTML elements to the PDF
+        const htmlElements = elementsContainer.querySelectorAll('.draggable');
+        for (const element of htmlElements) {
+          const x = parseInt(element.style.left, 10);
+          const y = pdfCanvas.height - parseInt(element.style.top, 10) - element.offsetHeight; // Correct y-axis inversion
+          const width = element.offsetWidth;
+          const height = element.offsetHeight;
+
+          // Capture the HTML element as an image
+          const htmlImage = await html2canvas(element, { useCORS: true }).then(canvas => canvas.toDataURL('image/png'));
+          const htmlBytes = await fetch(htmlImage).then(res => res.arrayBuffer());
+          const htmlPng = await newPdfDoc.embedPng(htmlBytes);
+          pdfPage.drawImage(htmlPng, {
+            x,
+            y,
+            width,
+            height,
+          });
+        }
+
+        // Save and download the PDF
+        const pdfBytes = await newPdfDoc.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'edited.pdf';
+        a.click();
+        URL.revokeObjectURL(url);
+
+      } catch (error) {
+        console.error('Error creating PDF:', error);
+        alert('There was an error creating the PDF. Please try again.');
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Editor</title>
+  <style>
+    #canvas-container {
+      position: relative;
+    }
+    canvas {
+      border: 1px solid black;
+    }
+    .toolbar {
+      margin: 10px 0;
+    }
+    .toolbar button {
+      margin-right: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <input type="file" id="file-input" />
+    <button id="add-annotation">Add Annotation</button>
+    <button id="add-table">Add Table</button>
+    <button id="draw-pencil">Draw Pencil</button>
+    <button id="add-signature">Add Signature</button>
+    <button id="add-comment">Add Comment</button>
+    <button id="download-pdf">Download PDF</button>
+  </div>
+  <div id="canvas-container">
+    <canvas id="pdf-canvas"></canvas>
+  </div>
+
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://unpkg.com/pdfjs-dist@2.16.105/build/pdf.min.js"></script>
+  <script>
+    const fileInput = document.getElementById('file-input');
+    const pdfCanvas = document.getElementById('pdf-canvas');
+    const ctx = pdfCanvas.getContext('2d');
+    let pdfDoc = null;
+    let existingPdfBytes = null;
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const fileReader = new FileReader();
+        fileReader.onload = async (event) => {
+          existingPdfBytes = new Uint8Array(event.target.result);
+          await renderPDF();
+        };
+        fileReader.readAsArrayBuffer(file);
+      }
+    });
+
+    async function renderPDF() {
+      const pdf = await pdfjsLib.getDocument({data: existingPdfBytes}).promise;
+      const page = await pdf.getPage(1);
+      const viewport = page.getViewport({ scale: 1.5 });
+      pdfCanvas.width = viewport.width;
+      pdfCanvas.height = viewport.height;
+      const renderContext = {
+        canvasContext: ctx,
+        viewport: viewport
+      };
+      await page.render(renderContext).promise;
+    }
+
+    document.getElementById('add-annotation').addEventListener('click', () => {
+      ctx.fillStyle = 'red';
+      ctx.fillRect(50, 50, 200, 50); // Example annotation
+    });
+
+    document.getElementById('add-table').addEventListener('click', () => {
+      ctx.strokeStyle = 'blue';
+      ctx.strokeRect(100, 100, 200, 100); // Example table
+      ctx.strokeRect(100, 100, 100, 50); // Example cell
+    });
+
+    let drawing = false;
+    document.getElementById('draw-pencil').addEventListener('click', () => {
+      drawing = true;
+      ctx.strokeStyle = 'black'; // Pencil color
+      ctx.lineWidth = 2; // Pencil thickness
+    });
+
+    pdfCanvas.addEventListener('mousedown', (e) => {
+      if (drawing) {
+        ctx.beginPath();
+        ctx.moveTo(e.offsetX, e.offsetY);
+      }
+    });
+
+    pdfCanvas.addEventListener('mousemove', (e) => {
+      if (drawing) {
+        ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.stroke();
+      }
+    });
+
+    pdfCanvas.addEventListener('mouseup', () => {
+      if (drawing) {
+        drawing = false;
+      }
+    });
+
+    document.getElementById('add-signature').addEventListener('click', () => {
+      ctx.fillStyle = 'green';
+      ctx.font = '20px Arial';
+      ctx.fillText('Signature', 300, 300); // Example signature
+    });
+
+    document.getElementById('add-comment').addEventListener('click', () => {
+      ctx.fillStyle = 'purple';
+      ctx.font = '16px Arial';
+      ctx.fillText('Comment', 400, 400); // Example comment
+    });
+
+    document.getElementById('download-pdf').addEventListener('click', async () => {
+      const { PDFDocument, rgb } = window.PDFLib;
+      const newPdfDoc = await PDFDocument.load(existingPdfBytes);
+      const [page] = await newPdfDoc.copyPages(newPdfDoc, [0]);
+      newPdfDoc.addPage(page);
+
+      const pdfPage = newPdfDoc.getPages()[0];
+      const { width, height } = pdfPage.getSize();
+      
+      // Draw the canvas content to the PDF
+      const canvasImage = pdfCanvas.toDataURL('image/png');
+      const pngImage = await newPdfDoc.embedPng(canvasImage);
+      pdfPage.drawImage(pngImage, {
+        x: 0,
+        y: 0,
+        width,
+        height,
+      });
+
+      const pdfBytes = await newPdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'edited.pdf';
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>

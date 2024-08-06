@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Editor</title>
+  <style>
+    #canvas-container {
+      position: relative;
+    }
+    canvas {
+      border: 1px solid black;
+    }
+    .toolbar {
+      margin: 10px 0;
+    }
+    .toolbar button {
+      margin-right: 5px;
+    }
+    .toolbar input[type="color"] {
+      margin-left: 5px;
+    }
+    .draggable {
+      position: absolute;
+      cursor: grab;
+      border: 1px solid black;
+      background-color: rgba(255, 255, 255, 0.7);
+      resize: both;
+      overflow: hidden; /* Hide scrollbars */
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <input type="file" id="file-input" />
+    <button id="add-annotation">Add Annotation</button>
+    <button id="add-signature">Add Signature</button>
+    <button id="add-comment">Add Comment</button>
+    <button id="add-table">Add Table</button>
+    <input type="color" id="text-color" value="#000000" />
+    <button id="download-pdf">Download PDF</button>
+  </div>
+  <div id="canvas-container">
+    <canvas id="pdf-canvas"></canvas>
+    <div id="elements-container"></div>
+  </div>
+
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://unpkg.com/pdfjs-dist@2.16.105/build/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.0/html2canvas.min.js"></script>
+  <script>
+    const fileInput = document.getElementById('file-input');
+    const pdfCanvas = document.getElementById('pdf-canvas');
+    const ctx = pdfCanvas.getContext('2d');
+    const elementsContainer = document.getElementById('elements-container');
+    const textColorInput = document.getElementById('text-color');
+    let existingPdfBytes = null;
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const fileReader = new FileReader();
+        fileReader.onload = async (event) => {
+          existingPdfBytes = new Uint8Array(event.target.result);
+          await renderPDF();
+        };
+        fileReader.readAsArrayBuffer(file);
+      }
+    });
+
+    async function renderPDF() {
+      const pdf = await pdfjsLib.getDocument({ data: existingPdfBytes }).promise;
+      const page = await pdf.getPage(1);
+      const viewport = page.getViewport({ scale: 1.5 });
+      pdfCanvas.width = viewport.width;
+      pdfCanvas.height = viewport.height;
+      const renderContext = {
+        canvasContext: ctx,
+        viewport: viewport
+      };
+      await page.render(renderContext).promise;
+    }
+
+    function makeElementDraggable(element) {
+      let isDragging = false;
+      let offsetX, offsetY;
+
+      element.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        offsetX = e.clientX - element.getBoundingClientRect().left;
+        offsetY = e.clientY - element.getBoundingClientRect().top;
+        element.style.cursor = 'grabbing';
+
+        function onMouseMove(e) {
+          if (!isDragging) return;
+          const newLeft = e.clientX - offsetX;
+          const newTop = e.clientY - offsetY;
+          element.style.left = `${newLeft}px`;
+          element.style.top = `${newTop}px`;
+        }
+
+        function onMouseUp() {
+          isDragging = false;
+          element.style.cursor = 'grab';
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+        }
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      });
+    }
+
+    function createSVGElement(svgContent, top, left, width = '150px', height = '50px') {
+      const element = document.createElement('div');
+      element.className = 'draggable';
+      element.style.top = top;
+      element.style.left = left;
+      element.style.width = width;
+      element.style.height = height;
+
+      const svgContainer = document.createElement('div');
+      svgContainer.innerHTML = svgContent;
+      element.appendChild(svgContainer);
+
+      elementsContainer.appendChild(element);
+      makeElementDraggable(element);
+    }
+
+    async function convertSVGToImage(svgContent) {
+      return new Promise((resolve) => {
+        const svgBlob = new Blob([svgContent], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(svgBlob);
+        const img = new Image();
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve(img);
+        };
+        img.src = url;
+      });
+    }
+
+    document.getElementById('add-annotation').addEventListener('click', async () => {
+      const text = prompt('Enter annotation text:');
+      if (text) {
+        const svgContent = `<svg width="200" height="50" xmlns="http://www.w3.org/2000/svg">
+          <text x="10" y="20" fill="${textColorInput.value}" font-size="16">${text}</text>
+        </svg>`;
+        const img = await convertSVGToImage(svgContent);
+        ctx.drawImage(img, 50, 50); // Adjust coordinates as needed
+      }
+    });
+
+    document.getElementById('add-signature').addEventListener('click', async () => {
+      const text = prompt('Enter signature text:');
+      if (text) {
+        const svgContent = `<svg width="200" height="50" xmlns="http://www.w3.org/2000/svg">
+          <text x="10" y="20" fill="${textColorInput.value}" font-size="16" font-style="italic">${text}</text>
+        </svg>`;
+        const img = await convertSVGToImage(svgContent);
+        ctx.drawImage(img, 300, 300); // Adjust coordinates as needed
+      }
+    });
+
+    document.getElementById('add-comment').addEventListener('click', async () => {
+      const text = prompt('Enter comment text:');
+      if (text) {
+        const svgContent = `<svg width="200" height="50" xmlns="http://www.w3.org/2000/svg">
+          <text x="10" y="20" fill="${textColorInput.value}" font-size="16">${text}</text>
+        </svg>`;
+        const img = await convertSVGToImage(svgContent);
+        ctx.drawImage(img, 400, 400); // Adjust coordinates as needed
+      }
+    });
+
+    document.getElementById('add-table').addEventListener('click', async () => {
+      const rows = parseInt(prompt('Enter number of rows:'), 10);
+      const cols = parseInt(prompt('Enter number of columns:'), 10);
+      if (isNaN(rows) || isNaN(cols)) return;
+
+      let tableHtml = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200">';
+      const cellWidth = 50;
+      const cellHeight = 30;
+      for (let r = 0; r <= rows; r++) {
+        tableHtml += `<line x1="0" y1="${r * cellHeight}" x2="${cols * cellWidth}" y2="${r * cellHeight}" stroke="black"/>`;
+      }
+      for (let c = 0; c <= cols; c++) {
+        tableHtml += `<line x1="${c * cellWidth}" y1="0" x2="${c * cellWidth}" y2="${rows * cellHeight}" stroke="black"/>`;
+      }
+      tableHtml += '</svg>';
+
+      const img = await convertSVGToImage(tableHtml);
+      ctx.drawImage(img, 150, 150); // Adjust coordinates as needed
+    });
+
+    document.getElementById('download-pdf').addEventListener('click', async () => {
+      const { PDFDocument } = window.PDFLib;
+      const newPdfDoc = await PDFDocument.create();
+      const pdfPage = newPdfDoc.addPage([pdfCanvas.width, pdfCanvas.height]);
+
+      // Draw the canvas content to the PDF
+      const canvasImage = pdfCanvas.toDataURL('image/png');
+      const pngImage = await newPdfDoc.embedPng(canvasImage);
+      pdfPage.drawImage(pngImage, {
+        x: 0,
+        y: 0,
+        width: pdfCanvas.width,
+        height: pdfCanvas.height,
+      });
+
+      // Add SVG elements
+      const svgElements = Array.from(elementsContainer.children);
+      for (const svgElement of svgElements) {
+        const svgContent = svgElement.innerHTML;
+        const img = await convertSVGToImage(svgContent);
+        pdfPage.drawImage(await newPdfDoc.embedPng(img.src), {
+          x: parseFloat(svgElement.style.left),
+          y: pdfCanvas.height - parseFloat(svgElement.style.top) - parseFloat(svgElement.style.height),
+          width: parseFloat(svgElement.style.width),
+          height: parseFloat(svgElement.style.height),
+        });
+      }
+
+      const pdfBytes = await newPdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'edited.pdf';
+      link.click();
+    });
+  </script>
+</body>
+</html>
