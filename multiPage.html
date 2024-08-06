@@ -3,37 +3,390 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <title>PDF Editor</title>
     <style>
         #pdf-container {
             position: relative;
             border: 1px solid #000; /* Optional: Just to visualize the container */
             overflow: hidden; /* Ensures no content overflows out of the container */
+            background-color: antiquewhite;
         }
         #pdf-canvas {
             position: absolute; /* Position absolutely within the container */
             top: 0;
             left: 0;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5), -2px -2px 5px rgba(255,255,255,0.5);
+            background-color: white;
         }
         #fabric-canvas {
             position: absolute; /* Position absolutely within the container */
             top: 0;
             left: 0;
+            
         }
         #toolbar {
             margin-bottom: 10px;
         }
+   
+/* Styling for navigation buttons */
+#nextPageBtn,
+#prevPageBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #5bd65f; /* Green color */
+    border: none;
+    border-radius: 100px; /* Round shape */
+    color: rgb(12, 12, 12);
+    padding: 8px 20px; /* Smaller padding */
+    font-size: 14px; /* Smaller font size */
+    cursor: pointer;
+    transition: background-color 0.3s, box-shadow 0.3s;
+    position: relative;
+    text-transform: uppercase;
+    text-decoration: none; /* Ensure there's no underline */
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Shadow for depth */
+}
+
+/* Icon styling inside the button */
+#nextPageBtn i,
+#prevPageBtn i {
+    margin-right: 8px; /* Margin between icon and text */
+    font-size: 16px; /* Icon size */
+}
+
+/* Hover effects for the button */
+#nextPageBtn:hover,
+#prevPageBtn:hover {
+    background-color: #4aa54a; /* Slightly darker green on hover */
+    box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.2); /* Increased shadow */
+}
+
+/* Active button state */
+#nextPageBtn:active,
+#prevPageBtn:active {
+    background-color: #4a9e4a; /* Even darker green */
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2); /* Shadow adjustment */
+}
+
+/* Focus state for accessibility */
+#nextPageBtn:focus,
+#prevPageBtn:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.5); /* Blue glow */
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 600px) {
+    #nextPageBtn,
+    #prevPageBtn {
+        padding: 6px 15px; /* Smaller padding */
+        font-size: 12px; /* Smaller font size */
+    }
+    
+    #nextPageBtn i,
+    #prevPageBtn i {
+        margin-right: 6px; /* Smaller margin */
+        font-size: 14px; /* Smaller icon */
+    }
+}
+
+/* Styling for download button */
+#downloadPDFBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #007bff; /* Blue color */
+    border: none;
+    border-radius: 30px; /* Round shape */
+    color: white;
+    padding: 10px 20px; /* Smaller padding */
+    font-size: 14px; /* Smaller font size */
+    cursor: pointer;
+    transition: background-color 0.3s, box-shadow 0.3s, transform 0.3s;
+    position: relative;
+    overflow: hidden;
+    text-transform: uppercase;
+    font-weight: bold;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Shadow for depth */
+}
+
+/* Icon styling inside the download button */
+#downloadPDFBtn i {
+    margin-right: 8px; /* Smaller margin */
+    font-size: 18px; /* Smaller icon */
+    transition: transform 0.3s;
+}
+
+/* Hover effects for the download button */
+#downloadPDFBtn:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+    box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.2); /* Increased shadow */
+    transform: translateY(-1px); /* Lift effect */
+}
+
+/* Active button state for download button */
+#downloadPDFBtn:active {
+    background-color: #004494; /* Even darker blue */
+    transform: translateY(0); /* No lift effect */
+}
+
+/* Focus state for download button */
+#downloadPDFBtn:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.5); /* Blue glow */
+}
+
+/* Styling for add table button */
+#addTableBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #28a745; /* Green color */
+    border: none;
+    border-radius: 30px; /* Round shape */
+    color: white;
+    padding: 10px 20px; /* Smaller padding */
+    font-size: 14px; /* Smaller font size */
+    cursor: pointer;
+    transition: background-color 0.3s, box-shadow 0.3s, transform 0.3s;
+    position: relative;
+    overflow: hidden;
+    text-transform: uppercase;
+    font-weight: bold;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Shadow for depth */
+}
+
+/* Icon styling inside the add table button */
+#addTableBtn i {
+    margin-right: 8px; /* Smaller margin */
+    font-size: 18px; /* Smaller icon */
+    transition: transform 0.3s;
+}
+
+/* Hover effects for the add table button */
+#addTableBtn:hover {
+    background-color: #218838; /* Darker green on hover */
+    box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.2); /* Increased shadow */
+    transform: translateY(-1px); /* Lift effect */
+}
+
+/* Active button state for add table button */
+#addTableBtn:active {
+    background-color: #1e7e34; /* Even darker green */
+    transform: translateY(0); /* No lift effect */
+}
+
+/* Focus state for add table button */
+#addTableBtn:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.5); /* Green glow */
+}
+
+/* Hide the default file input */
+.file-input {
+    display: none;
+}
+
+/* Styling for the custom file input label */
+.file-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f7893fe7; /* Blue color */
+    border: none;
+    border-radius: 5px; /* Rounded corners */
+    color: rgb(12, 12, 12);
+    padding: 10px 20px; /* Adjust padding */
+    font-size: 14px; /* Font size */
+    cursor: pointer;
+    transition: background-color 0.3s, box-shadow 0.3s, transform 0.3s;
+    text-transform: uppercase;
+    font-weight: bold;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Shadow for depth */
+}
+
+/* Icon styling inside the file label */
+.file-label i {
+    margin-right: 8px; /* Margin between icon and text */
+    font-size: 18px; /* Icon size */
+    transition: transform 0.3s;
+}
+
+/* Hover effects for the file label */
+.file-label:hover {
+    background-color: #b35100; /* Darker blue on hover */
+    box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.2); /* Increased shadow */
+}
+
+/* Active state for the file label */
+.file-label:active {
+    background-color: #004494; /* Even darker blue */
+    transform: translateY(1px); /* Press effect */
+}
+
+/* Focus state for the file label */
+.file-label:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.5); /* Blue glow */
+}
+
+/* Responsive design adjustments */
+@media (max-width: 600px) {
+    .file-label {
+        padding: 8px 15px; /* Smaller padding */
+        font-size: 12px; /* Smaller font size */
+    }
+    
+    .file-label i {
+        margin-right: 6px; /* Smaller margin */
+        font-size: 16px; /* Smaller icon */
+    }
+}
+
+/* Styling for text input */
+#userInput {
+    border: 2px solid #ced4da; /* Light gray border */
+    border-radius: 6px; /* Slightly rounded corners */
+    padding: 8px 12px; /* Smaller padding */
+    font-size: 14px; /* Smaller font size */
+    color: #495057; /* Dark gray text color */
+    background-color: #ffffff; /* White background */
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1); /* Shadow for depth */
+    transition: border-color 0.3s, box-shadow 0.3s; /* Smooth transitions */
+    width: 100%; /* Full width */
+    max-width: 300px; /* Smaller maximum width */
+}
+
+/* Focus state for the text input */
+#userInput:focus {
+    border-color: #007bff; /* Blue border on focus */
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25); /* Blue shadow */
+    outline: none; /* Remove default outline */
+}
+
+/* Placeholder styling */
+#userInput::placeholder {
+    color: #6c757d; /* Gray color for placeholder text */
+    opacity: 1; /* Ensure placeholder text is fully opaque */
+}
+
+/* Styling for add text button */
+#addTextBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #007bff; /* Blue color */
+    border: none;
+    border-radius: 25px; /* Rounded corners */
+    color: white;
+    padding: 10px 20px; /* Smaller padding */
+    font-size: 14px; /* Smaller font size */
+    cursor: pointer;
+    transition: background-color 0.3s, box-shadow 0.3s, transform 0.3s;
+    text-transform: uppercase;
+    font-weight: bold;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Shadow for depth */
+}
+
+/* Icon styling inside the add text button */
+#addTextBtn i {
+    margin-right: 8px; /* Smaller margin */
+    font-size: 18px; /* Smaller icon */
+    transition: transform 0.3s;
+}
+
+/* Hover effects for the add text button */
+#addTextBtn:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+    box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.2); /* Increased shadow */
+    transform: translateY(-1px); /* Lift effect */
+}
+
+/* Active button state for add text button */
+#addTextBtn:active {
+    background-color: #004494; /* Even darker blue */
+    transform: translateY(0); /* No lift effect */
+}
+
+/* Focus state for add text button */
+#addTextBtn:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.5); /* Blue glow */
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 600px) {
+    /* Adjustments already made above for smaller screens */
+}
+
+/* Styling for the link */
+#thisPage {
+    display: inline-block;
+    background-color: #e2e8ee; /* Blue background */
+    color: rgb(0, 0, 0);
+    border-radius: 25px; /* Rounded corners */
+    padding: 10px 20px; /* Padding for size */
+    font-size: 16px; /* Font size */
+    text-decoration: none; /* Remove underline */
+    transition: background-color 0.3s, color 0.3s, box-shadow 0.3s;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Shadow for depth */
+    cursor: pointer;
+    text-align: center; /* Center text */
+}
+
+/* Hover effects for the link */
+#thisPage:hover {
+    background-color: #adbfd13a; /* Darker blue on hover */
+    color: #e2e6e9; /* Lighter text color on hover */
+    box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.2); /* Increased shadow */
+}
+
+/* Active state for the link */
+#thisPage:active {
+    background-color: #4d5968; /* Even darker blue */
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2); /* Shadow adjustment */
+}
+
+/* Focus state for the link */
+#thisPage:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(200, 208, 216, 0.5); /* Blue glow */
+}
+
+/* Styling for the input field when editing */
+.editable-input {
+    border: 2px solid #162d44; /* Blue border */
+    border-radius: 25px; /* Rounded corners */
+    padding: 10px 20px; /* Padding for size */
+    font-size: 16px; /* Font size */
+    color: #495057; /* Dark gray text color */
+    background-color: #ffffff; /* White background */
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Shadow for depth */
+    transition: border-color 0.3s, box-shadow 0.3s; /* Smooth transitions */
+    width: 100px; /* Adjust width as needed */
+    max-width: 100%; /* Responsive */
+    box-sizing: border-box; /* Include padding in width */
+}
     </style>
 </head>
 <body>
     <div id="toolbar">
-        <input type="file" id="upload" accept="application/pdf" />
+       
+          <!-- Hidden file input -->
+          <input type="file" id="upload" accept="application/pdf"class="file-input">
+          <!-- Custom file input button -->
+          <label for="upload" class="file-label">
+              <i class="fas fa-upload"></i> Upload File
+          </label>
         <input type="text" id="userInput" name="userInput" placeholder="Enter text">
-        <button id="addTextBtn">Add Text</button>
-        <button id="addTableBtn">Add Table</button>
-        <button id="prevPageBtn">Previous Page</button>
-        <button id="nextPageBtn">Next Page</button>
-        <button id="downloadPDFBtn">Download PDF</button>
+        <button id="addTextBtn">   <i class="fas fa-plus"></i> Add Text</button>
+        <button id="addTableBtn"><i class="fas fa-table"></i> Add Table</button>
+        <button id="prevPageBtn"><i class="fas fa-chevron-left"></i></button>
+    <a id="thisPage"></a>
+        <button id="nextPageBtn" >  <i class="fas fa-chevron-right"></i></button>
+        <button id="downloadPDFBtn">  <i class="fas fa-download"></i>Download PDF</button>
     </div>
 
     <div id="pdf-container">
@@ -53,10 +406,56 @@
         let numPages = 0;
         let pageAnnotations = {};
         let tableInfo = null;
-        let tableGroup = null;
-      
-        let cells = ['Director', '','division', '', 'Office No', '']
+        let tableGroup = {};
 
+        let cells = ['Director', 'Mr. Micheal Scott','Committe Member', 'Mr. Dwight Schrute', 'Officer', 'Ms. Pam beasely', 'Inspection officer', 'Mr. John Krisinski', 'Release Manger', 'Ms.Angela'].reverse()
+
+        let cellss = cells.reverse()
+        document.addEventListener("DOMContentLoaded", function() {
+            var thisPageLink = document.getElementById('thisPage');
+            if (!thisPageLink.textContent.trim()) {
+                thisPageLink.textContent = '/';
+            }
+        });
+        document.addEventListener("DOMContentLoaded", function() {
+            const link = document.getElementById('thisPage');
+            let isEditing = false;
+
+            link.addEventListener('click', function(event) {
+                event.preventDefault();
+
+                if (!isEditing) {
+                    // Convert the link to an input field
+                    const input = document.createElement('input');
+                    input.type = 'number';
+                    input.value = link.textContent.trim();
+                    input.style.cssText = getComputedStyle(link).cssText; // Copy existing styles
+                    input.classList.add('editable-input');
+                    input.addEventListener('blur', function() {
+                        // On blur (when the input loses focus)
+                        const newPage = input.value.trim();
+                        link.textContent = newPage || '/';
+                        link.style.cssText = getComputedStyle(input).cssText; // Restore link styles
+                        link.classList.remove('editable-input');
+                        link.href = '#'; // Reset the href attribute if needed
+
+                        // Call loadPage function with the new value
+                        const currentPage = parseInt(link.textContent.trim(), 10);
+                        loadPage(currentPage);
+
+                        // Replace input with link
+                        input.parentNode.replaceChild(link, input);
+                        isEditing = false;
+                    });
+                    link.parentNode.replaceChild(input, link);
+                    input.focus();
+                    isEditing = true;
+                }
+            });
+
+      
+        });
+        
         document.getElementById('upload').addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
@@ -107,6 +506,7 @@
                 currentPage--;
                 loadPage(currentPage);
             }
+            document.getElementById("thisPage").innerHTML = currentPage;
         });
 
         document.getElementById('nextPageBtn').addEventListener('click', () => {
@@ -115,6 +515,7 @@
                 currentPage++;
                 loadPage(currentPage);
             }
+            document.getElementById("thisPage").innerHTML = currentPage;
         });
 
         document.getElementById('addTextBtn').addEventListener('click', () => {
@@ -134,9 +535,10 @@
         });
 
         document.getElementById('addTableBtn').addEventListener('click', () => {
-            const rows = parseInt(prompt("Enter number of data rows:", "5"));
-            const cellWidth = parseInt(prompt("Enter cell width:", "100"));
-            const cellHeight = parseInt(prompt("Enter cell height:", "50"));
+            // const rows = parseInt(prompt("Enter number of data rows:", "5"));
+            // const cellWidth = parseInt(prompt("Enter cell width:", "100"));
+            // const cellHeight = parseInt(prompt("Enter cell height:", "50"));
+            let xx = 0
        tableInfo = {
                 x: 100, // Position of the table
                 y: 200,
@@ -145,11 +547,11 @@
                 cellWidth: 100,
                 cellHeight: 50
             };
-
-            tableGroup = new fabric.Group([], {
+            const temp =  new fabric.Group([], {
                 left: tableInfo.x,
                 top: tableInfo.y
             });
+            tableGroup[currentPage] = temp
             // const tableInfo = {
             //     x: 100,
             //     y: 200,
@@ -174,7 +576,7 @@
                         height: tableInfo.cellHeight
                     });
 
-                    const cellText = new fabric.Text(cells[j], {
+                    const cellText = new fabric.Text(cellss[xx], {
                         left: j * tableInfo.cellWidth +10,
                         top: i * tableInfo.cellHeight + 10,
                         fontSize: 14,
@@ -182,9 +584,10 @@
                         originX: 'left',
                         originY: 'top'
                     });
-
-                    tableGroup.addWithUpdate(rect);
-                    tableGroup.addWithUpdate(cellText);
+                    // console.log("table Group", tableGroup[tableGroup.length -1])
+                    tableGroup[currentPage].addWithUpdate(rect);
+                    tableGroup[currentPage].addWithUpdate(cellText);
+                    xx++ 
                 }
             }
             // for (let i = 0; i < tableInfo.rows; i++) {
@@ -211,8 +614,8 @@
             //         tableGroup.addWithUpdate(cellTextElement);
             //     }
             // }
-console.log("Table info", tableInfo)
-            fabricCanvas.add(tableGroup);
+// console.log("Table info", tableInfo)
+            fabricCanvas.add(tableGroup[currentPage]);
             saveAnnotation();
         });
 
@@ -292,9 +695,9 @@ console.log("Table info", tableInfo)
                     </svg>
                 `;
     
-                // Optionally, display or use the SVG string
-                console.log(svgString);
-                console.log('SVG content has been generated and logged to the console.', textElements);
+                // // Optionally, display or use the SVG string
+                // console.log(svgString);
+                // console.log('SVG content has been generated and logged to the console.', textElements);
             }
 
 
@@ -305,7 +708,7 @@ console.log("Table info", tableInfo)
             const page = pdfDoc.getPages()[0];
             const { width, height } = page.getSize();
             textElements.map((textElement) => {
-            console.log('textElement', textElement.text, textElement.scaleX, textElement.scaleY)
+            // console.log('textElement', textElement.text, textElement.scaleX, textElement.scaleY)
             page.drawText(textElement.text, {
                         x :textElement.left, // X-coordinate for the text
                         y: height - (textElement.top + (20 *textElement.scaleY)), // Y-coordinate for the text
@@ -314,20 +717,24 @@ console.log("Table info", tableInfo)
                     
                     });
 })
-            for (let i = 0; i < numPages; i++) {
-                const page = pdfDoc.getPages()[i];
+
+console.log("page number", "numPages", numPages, "tableGroup", Object.keys(tableGroup))
+if (Object.keys(tableGroup).length == 1){
+    for (let i = 0; i < numPages ; i++) {
+                const page = pdfDoc.getPages()[0];
                 const { width, height } = page.getSize();
 
-                if (i === currentPage - 1) {
-                    console.log("the pdf is priting", currentPage, tableInfo, )
-                    if (tableInfo) {
-                        const cellWidth = tableInfo.cellWidth * Number(tableGroup.scaleX);
-                        const cellHeight = tableInfo.cellHeight * Number(tableGroup.scaleY);
+                    // console.log("the pdf is priting", currentPage, tableInfo, )
+                    console.log("page number", i, "numPages", numPages, "tableGroup", Object.keys(tableGroup))
+                    if (tableInfo && tableGroup[1] !=null) {
+                        const cellWidth = tableInfo.cellWidth * Number(tableGroup[1].scaleX);
+                        const cellHeight = tableInfo.cellHeight * Number(tableGroup[1].scaleY);
                         const rows = tableInfo.rows;
                         const columns = tableInfo.columns;
-                        const x = (tableGroup.left) ;
-                        const y = height - ((tableGroup.top + (tableInfo.rows * cellHeight))) // Adjust y-coordinate for PDF coordinate system
-                        console.log('tableGroup', tableGroup)
+                        const x = (tableGroup[1].left) ;
+                        const y = height - ((tableGroup[1].top + (tableInfo.rows * cellHeight))) // Adjust y-coordinate for PDF coordinate system
+                        // console.log('tableGroup',i, tableGroup[i])
+                        let xx = 0
                         for (let row = 0; row < rows; row++) {
                             for (let col = 0; col < columns; col++) {
                                 page.drawRectangle({
@@ -339,12 +746,13 @@ console.log("Table info", tableInfo)
                                     borderWidth: 1
                                 });
 
-                                page.drawText(cells[col], {
+                                page.drawText(cellss[xx], {
                                     x: x + col * cellWidth + 10,
-                                    y: y + row * cellHeight*(Number(tableGroup.scaleX)) + cellHeight - 24, // Adjust text position
-                                    size: 14  * Number(tableGroup.scaleX),
+                                    y: y + row * cellHeight + cellHeight - ( 24 * (Number(tableGroup[1].scaleY))), // Adjust text position
+                                    size: 14  * Number(tableGroup[1].scaleX),
                                     color: PDFLib.rgb(0, 0, 0)
                                 });
+                                xx++
                             }
                         }
                     }
@@ -356,15 +764,66 @@ console.log("Table info", tableInfo)
                     });
                     const pngImage = await pdfDoc.embedPng(fabricDataUrl);
 
-                    // Draw the image on the PDF
-                    // page.drawImage(pngImage, {
-                    //     x: 0,
-                    //     y: 0,
-                    //     width: width,
-                    //     height: height
-                    // });
-                }
+                
             }
+           
+           
+}else {
+
+    for (let i = 1; i < numPages ; i++) {
+                const page = pdfDoc.getPages()[i-1];
+                const { width, height } = page.getSize();
+
+                    // console.log("the pdf is priting", currentPage, tableInfo, )
+                    console.log("page number", i, "numPages", numPages, "tableGroup", Object.keys(tableGroup))
+                    if (tableInfo && tableGroup[i] !=null) {
+                        const cellWidth = tableInfo.cellWidth * Number(tableGroup[i].scaleX);
+                        const cellHeight = tableInfo.cellHeight * Number(tableGroup[i].scaleY);
+                        const rows = tableInfo.rows;
+                        const columns = tableInfo.columns;
+                        const x = (tableGroup[i].left) ;
+                        const y = height - ((tableGroup[i].top + (tableInfo.rows * cellHeight))) // Adjust y-coordinate for PDF coordinate system
+                        // console.log('tableGroup',i, tableGroup[i])
+                        let xx = 0
+                        for (let row = 0; row < rows; row++) {
+                            for (let col = 0; col < columns; col++) {
+                                page.drawRectangle({
+                                    x: x + col * cellWidth,
+                                    y: y + row * cellHeight,
+                                    width: (col === 0 ? cellWidth : cellWidth * 4),
+                                    height: cellHeight,
+                                    borderColor: PDFLib.rgb(0, 0, 0),
+                                    borderWidth: 1
+                                });
+
+                                page.drawText(cellss[xx], {
+                                    x: x + col * cellWidth + 10,
+                                    y: y + row * cellHeight + cellHeight - ( 24 * (Number(tableGroup[i].scaleY))), // Adjust text position
+                                    size: 14  * Number(tableGroup[i].scaleX),
+                                    color: PDFLib.rgb(0, 0, 0)
+                                });
+                                xx++
+                            }
+                        }
+                    }
+
+                    // Convert fabric canvas to high-resolution image
+                    const fabricDataUrl = fabricCanvas.toDataURL({
+                        format: 'png',
+                        quality: 1 // Max quality
+                    });
+                    const pngImage = await pdfDoc.embedPng(fabricDataUrl);
+
+                
+            }
+       
+
+}
+           
+    
+                
+           
+           
             // console.log("%cImage functionality is commented", "color:orange;font-family:system-ui;font-size:2rem;-webkit-text-stroke: 1px black;font-weight:bold")
 // if(images.length > 0){
 //     const imageUrl = 'https://images.unsplash.com/photo-1614680376408-81e91ffe3db7?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
